@@ -15,3 +15,5 @@ services:
         sync: false
       - key: FAISS_INDEX_DIR
         value: ./faiss_index
+      - key: PYTHON_VERSION
+        value: 3.12.3
