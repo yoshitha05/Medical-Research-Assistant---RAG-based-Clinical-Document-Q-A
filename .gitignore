@@ -14,4 +14,4 @@ frontend/build/
 backend/static/
 
 # OS
-.DS_Store
+.DS_Storebackend/venv/
