@@ -34,6 +34,14 @@ def create_document(filename: str, doc_type: str, raw_text: str) -> str:
     })
     return str(result.inserted_id)
 
+def delete_document(document_id: str):
+    db = get_db()
+    oid = ObjectId(document_id)
+    chunk_docs = list(db.chunks.find({"document_id": oid}, {"faiss_vector_id": 1}))
+    vector_ids = [c["faiss_vector_id"] for c in chunk_docs]
+    db.chunks.delete_many({"document_id": oid})
+    db.documents.delete_one({"_id": oid})
+    return vector_ids
 
 def list_documents():
     db = get_db()

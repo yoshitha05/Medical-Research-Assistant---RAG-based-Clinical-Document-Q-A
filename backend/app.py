@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()  # loads .env for local dev; on Render, env vars come from the dashboard instead
+load_dotenv()
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -19,17 +19,25 @@ ALLOWED_DOC_TYPES = {"discharge_summary", "clinical_note", "research_paper"}
 
 @app.post("/api/upload")
 def upload_document():
-    """Accepts a plain-text clinical document, chunks it, embeds each chunk,
-    stores the vectors in FAISS and the text + metadata in MongoDB."""
-    payload = request.get_json(silent=True) or {}
-    filename = payload.get("filename")
-    doc_type = payload.get("doc_type", "clinical_note")
-    raw_text = payload.get("text")
-
-    if not filename or not raw_text:
-        return jsonify({"error": "filename and text are required"}), 400
+    """Accepts a real .txt or .pdf file (multipart), chunks it, embeds each
+    chunk, stores the vectors in FAISS and the text + metadata in MongoDB."""
+    doc_type = request.form.get("doc_type", "clinical_note")
     if doc_type not in ALLOWED_DOC_TYPES:
         return jsonify({"error": f"doc_type must be one of {sorted(ALLOWED_DOC_TYPES)}"}), 400
+
+    if "file" not in request.files:
+        return jsonify({"error": "a file is required"}), 400
+    file = request.files["file"]
+    filename = request.form.get("filename") or file.filename
+    raw_bytes = file.read()
+
+    lower_name = (file.filename or "").lower()
+    if lower_name.endswith(".pdf"):
+        raw_text = rag.extract_text_from_pdf(raw_bytes)
+    elif lower_name.endswith(".txt"):
+        raw_text = raw_bytes.decode("utf-8", errors="ignore")
+    else:
+        return jsonify({"error": "only .txt and .pdf files are supported"}), 400
 
     document_id = db.create_document(filename, doc_type, raw_text)
 
@@ -65,14 +73,20 @@ def get_document(document_id):
     doc["_id"] = str(doc["_id"])
     return jsonify(doc)
 
+@app.delete("/api/documents/<document_id>")
+def delete_document(document_id):
+    """Deletes a document's MongoDB records and its FAISS vectors."""
+    vector_ids = db.delete_document(document_id)
+    if vector_ids:
+        rag.remove_vectors(vector_ids)
+    return jsonify({"deleted": document_id}), 200
+
 
 @app.post("/api/ask")
 def ask_question():
-    """Embeds the question, finds the nearest chunks via FAISS, looks their
-    text up in MongoDB, and asks Gemini to answer grounded in that text."""
     payload = request.get_json(silent=True) or {}
     question = payload.get("question")
-    document_id = payload.get("document_id")  # optional: restrict to one document
+    document_id = payload.get("document_id")
     top_k = int(payload.get("top_k", 5))
 
     if not question:
@@ -80,7 +94,6 @@ def ask_question():
 
     query_vector = rag.embed_texts([question], task_type="retrieval_query")[0]
 
-    # Over-fetch, then filter down to the requested document if one was given.
     fetch_k = top_k * 4 if document_id else top_k
     candidate_ids = rag.search(query_vector, top_k=fetch_k)
     candidates = db.get_chunks_by_faiss_ids(candidate_ids)
@@ -114,7 +127,6 @@ def health():
     return jsonify({"status": "ok"})
 
 
-# --- Serve the built React app for everything else ---
 @app.get("/", defaults={"path": ""})
 @app.get("/<path:path>")
 def serve_react(path):
@@ -125,4 +137,4 @@ def serve_react(path):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

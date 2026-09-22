@@ -3,6 +3,7 @@
 FAISS only ever stores vectors and hands back vector ids (integers).
 Mongo (see db.py) is what turns a vector id back into readable chunk text.
 """
+import io
 import os
 import threading
 
@@ -10,10 +11,11 @@ import faiss
 import google.generativeai as genai
 import numpy as np
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pypdf import PdfReader
 
-EMBED_MODEL = "models/text-embedding-004"
+EMBED_MODEL = "models/gemini-embedding-001"
 EMBED_DIM = 768
-GEN_MODEL = "gemini-1.5-flash"
+GEN_MODEL = "gemini-3.6-flash"
 
 _lock = threading.Lock()
 _index = None
@@ -47,6 +49,10 @@ def get_index():
 def _save_index():
     faiss.write_index(_index, _index_path)
 
+def extract_text_from_pdf(file_bytes: bytes) -> str:
+    reader = PdfReader(io.BytesIO(file_bytes))
+    pages = [page.extract_text() or "" for page in reader.pages]
+    return "\n\n".join(pages).strip()
 
 def chunk_text(raw_text: str) -> list[str]:
     splitter = RecursiveCharacterTextSplitter(
@@ -63,7 +69,7 @@ def embed_texts(texts: list[str], task_type: str) -> np.ndarray:
     model optimizes the vector differently depending on which side it's for."""
     vectors = []
     for t in texts:
-        result = genai.embed_content(model=EMBED_MODEL, content=t, task_type=task_type)
+        result = genai.embed_content(model=EMBED_MODEL, content=t, task_type=task_type, output_dimensionality=EMBED_DIM)
         vectors.append(result["embedding"])
     return np.array(vectors, dtype="float32")
 
@@ -74,6 +80,11 @@ def add_vectors(vectors: np.ndarray, ids: list[int]):
         index.add_with_ids(vectors, np.array(ids, dtype="int64"))
         _save_index()
 
+def remove_vectors(ids: list[int]):
+    with _lock:
+        index = get_index()
+        index.remove_ids(np.array(ids, dtype="int64"))
+        _save_index()
 
 def next_vector_id(count: int) -> list[int]:
     """FAISS doesn't hand out ids for us with IndexIDMap, so we track the

@@ -7,7 +7,7 @@ body {
 }
 .page { max-width: 680px; margin: 0 auto; padding: 32px 20px 60px; }
 h1 { margin-bottom: 4px; }
-.subtitle { color: #54635C; margin-top: 0; }
+.subtitle { color: #1a1a1a; opacity: 0.75; margin-top: 0; }
 .card {
   background: #fff;
   border: 1px solid #D3DAD3;
@@ -43,3 +43,68 @@ button:disabled { opacity: 0.6; cursor: default; }
 .sources ul { margin: 0; padding-left: 18px; font-size: 13px; color: #54635C; }
 .doc-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .doc-list li { font-size: 14px; padding: 8px 10px; background: #E4E9E4; border-radius: 6px; }
+
+.doc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.doc-row span {
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+
+.delete-btn {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.tab-btn {
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: #2a2a2a;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+  color: #0f2f22;
+  font-weight: 600;
+  border-bottom: 2px solid #2f6f4f;
+}
+
+/* body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e8f5ee 0%, #f4f9f6 40%, #e6f2f7 100%);
+  background-attachment: fixed;
+} */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #39634f 0%, #5ea09c 45%, #43677f 100%);
+  background-attachment: fixed;
+}
+
+.page {
+  background: transparent;
+  min-height: 100vh;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
