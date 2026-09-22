@@ -1,8 +1,17 @@
+# Python
 __pycache__/
 *.pyc
+venv/
 .env
+
+# FAISS index (rebuilt on deploy)
 backend/faiss_index/
-backend/static/
+*.index
+
+# Frontend
 frontend/node_modules/
 frontend/build/
+backend/static/
+
+# OS
 .DS_Store
